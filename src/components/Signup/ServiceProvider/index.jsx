@@ -16,9 +16,13 @@ const SignupServiceProvider = () => {
   const [toggleZoneDocs, setToggleZoneDocs] = useState("zoneImageDocs");
   const [showCodigoInput, setShowCodigoInput] = useState(false);
 
+  // estados para edição inline na revisão
+  const [editField, setEditField] = useState(null);
+  const [editValue, setEditValue] = useState('');
+
   useEffect(() => {
     let interval;
-    if (step === 5 && timer > 0) {
+    if (step === 6 && timer > 0) {
       interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
     }
     return () => clearInterval(interval);
@@ -67,18 +71,13 @@ const SignupServiceProvider = () => {
     return completo;
   };
 
-  // validação de nome completo robusta
   const validarNomeCompleto = (nome) => {
     if (!nome) return false;
-
     const palavras = nome.trim().split(/\s+/);
     if (palavras.length < 2) return false;
-
-    // cada palavra deve ter pelo menos 2 letras, pode ter hífen/apóstrofo
     for (let palavra of palavras) {
       if (!/^[A-Za-zÀ-ÿ]{2,}([-'][A-Za-zÀ-ÿ]{2,})?$/.test(palavra)) return false;
     }
-
     return true;
   };
 
@@ -129,10 +128,14 @@ const SignupServiceProvider = () => {
     if (!formData.confirmarSenha) return showPopup("Confirme a senha");
     if (formData.senha !== formData.confirmarSenha) return showPopup("As senhas não coincidem");
 
+    setStep(5); // passo da revisão dos dados
+  };
+
+  const handleConfirmStep = () => {
     console.log(formData);
-    showPopup("Cadastro realizado com sucesso!", "success");
-    setStep(5);
+    setStep(6); // passo de confirmação do código de e-mail
     setTimer(30);
+    showPopup("Dados confirmados! Agora verifique seu e-mail.", "success");
   };
 
   const reenviarCodigo = () => {
@@ -159,12 +162,7 @@ const SignupServiceProvider = () => {
             }}
           />
           {showCodigoInput && (
-            <input
-              type="text"
-              name="codigoWhats"
-              placeholder="Digite o código de confirmação"
-              onChange={handleChange}
-            />
+            <input type="text" name="codigoWhats" placeholder="Código de confirmação" onChange={handleChange} />
           )}
           <input type="text" name="especialidade" placeholder='Especialidade *' onChange={handleChange} />
           <input type="text" name="cursos" placeholder='Cursos (opcional)' onChange={handleChange} />
@@ -206,11 +204,10 @@ const SignupServiceProvider = () => {
         </form>
       )}
 
-      {/* Step 4 */}
+      {/* Step 4 - Finalização */}
       {step === 4 && (
         <form className='d-flex flex-column gap-4 animate__animated animate__fadeIn' onSubmit={handleSubmit}>
           <span className='title'>Finalização</span>
-
           <label className={`${toggleZoneDocs}`}>
             <input
               type="file"
@@ -223,27 +220,16 @@ const SignupServiceProvider = () => {
               }}
             />
           </label>
-
           <label>Data de Nascimento *</label>
           <input type="date" name="nascimento" onChange={handleChange} />
           <div className="password-wrapper">
-            <input
-              type={showPassword ? "text" : "password"}
-              name="senha"
-              placeholder='Senha *'
-              onChange={handleChange}
-            />
+            <input type={showPassword ? "text" : "password"} name="senha" placeholder='Senha *' onChange={handleChange} />
             <span className="toggle-eye" onClick={() => setShowPassword(!showPassword)}>
               {showPassword ? '🙈' : '👁️'}
             </span>
           </div>
           <div className="password-wrapper">
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              name="confirmarSenha"
-              placeholder='Confirmar Senha *'
-              onChange={handleChange}
-            />
+            <input type={showConfirmPassword ? "text" : "password"} name="confirmarSenha" placeholder='Confirmar Senha *' onChange={handleChange} />
             <span className="toggle-eye" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
               {showConfirmPassword ? '🙈' : '👁️'}
             </span>
@@ -252,19 +238,46 @@ const SignupServiceProvider = () => {
         </form>
       )}
 
-      {/* Step 5 */}
+      {/* Step 5 - Revisão de dados */}
       {step === 5 && (
+        <div className='d-flex flex-column gap-4 animate__animated animate__fadeIn'>
+          <span className='title'>Revise seus dados</span>
+          {Object.entries(formData).map(([key, value]) => {
+            if (key === "senha" || key === "confirmarSenha" || key === "docFoto" || key === "codigoWhats") return null;
+            return (
+              <div key={key} className="review-field d-flex align-items-center justify-content-between">
+                {editField === key ? (
+                  <input
+                    type="text"
+                    value={editValue}
+                    autoFocus
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onBlur={() => { setFormData(prev => ({ ...prev, [key]: editValue })); setEditField(null); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { setFormData(prev => ({ ...prev, [key]: editValue })); setEditField(null); } }}
+                  />
+                ) : (
+                  <span>{`${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`}</span>
+                )}
+                {editField !== key && (
+                  <span className="edit-icon" style={{ cursor: 'pointer', marginLeft: '10px' }} onClick={() => { setEditField(key); setEditValue(value); }}>
+                    ✏️
+                  </span>
+                )}
+              </div>
+            )
+          })}
+          <button className='btn' onClick={handleConfirmStep}>Confirmar e Continuar</button>
+        </div>
+      )}
+
+      {/* Step 6 - Confirmação de e-mail */}
+      {step === 6 && (
         <form className='d-flex flex-column gap-4 animate__animated animate__fadeIn'>
           <span className='title'>Confirmação de E-mail</span>
           <p>Enviamos um código de verificação para o seu e-mail. Digite abaixo para confirmar:</p>
           <input type="text" name="codigo" placeholder='Digite o código recebido' onChange={handleChange} />
           <button className='btn'>Confirmar Código</button>
-          <button
-            type="button"
-            className='btn btn-secondary'
-            disabled={timer > 0}
-            onClick={reenviarCodigo}
-          >
+          <button type="button" className='btn btn-secondary' disabled={timer > 0} onClick={reenviarCodigo}>
             {timer > 0 ? `Reenviar em ${timer}s` : "Reenviar Código"}
           </button>
         </form>
