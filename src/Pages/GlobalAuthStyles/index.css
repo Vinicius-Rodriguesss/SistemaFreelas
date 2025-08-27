@@ -1,0 +1,18 @@
+.bodyPageAuth{
+    height: 100dvh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.zoneAuthetication{
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+    width: 30rem;
+    padding: 2rem;
+    border-radius: 1rem;
+}
+*{
+    overflow: hidden;
+}

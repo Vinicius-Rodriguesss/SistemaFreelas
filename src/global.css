@@ -1,0 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400..700;1,400..700&display=swap');
+
+* {
+    margin: 0px;
+    padding: 0px;
+    text-decoration: none;
+    box-sizing: border-box;
+    list-style: none;
+    text-rendering: optimizeLegibility;
+
+    font-family: "Arimo", sans-serif;
+    font-optical-sizing: auto;
+    font-size: 0.9rem;
+}
+
+:root {
+    /* Color Button */
+    --bg-black: black;
+    --bg-white: white;
+    --bg-cinza: #d1d5db97;
+
+    /* Font */
+    --font-900: 800;
+    --font-700: 700;
+    --font-600: 600;
+
+}
+
+input, textarea {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.9rem 0.8rem;
+  font-size: 0.95rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus {
+    outline: none;
+}
+
+.btn {
+    background-color: var(--bg-black);
+    padding: .7rem .7rem;
+    color: white;
+    transition: all .5s;
+    font-weight: var(--font-600);
+}
+
+.btn:hover {
+    background-color: var(--bg-cinza);
+    color: var(--bg-black);
+    transition: all .5s;
+}
+
+.title{
+    font-size: 1.5rem;  
+    font-weight: var(--font-900);
+}
