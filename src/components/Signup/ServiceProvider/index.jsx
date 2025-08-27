@@ -13,7 +13,8 @@ const SignupServiceProvider = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [end, setEnd] = useState("d-flex");
   const [timer, setTimer] = useState(30);
-  const [toggleZoneDocs, setToggleZoneDocs] = useState("zoneImageDocs")
+  const [toggleZoneDocs, setToggleZoneDocs] = useState("zoneImageDocs");
+  const [showCodigoInput, setShowCodigoInput] = useState(false);
 
   useEffect(() => {
     let interval;
@@ -59,6 +60,15 @@ const SignupServiceProvider = () => {
     setToggleZoneDocs("zoneImageDocsActive");
   }
 
+  // função separada para verificar se o número de whatsapp está completo
+  const verificarNumeroCompleto = (numero) => {
+    const numeros = numero.replace(/\D/g, '');
+    const completo = numeros.length === 11;
+    setShowCodigoInput(completo);
+    return completo;
+  };
+
+
   const nextStep = (e) => {
     e.preventDefault();
 
@@ -66,6 +76,11 @@ const SignupServiceProvider = () => {
       if (!formData.nome) return showPopup("Nome completo é obrigatório");
       if (!formData.whatsapp) return showPopup("Número WhatsApp é obrigatório");
       if (!formData.especialidade) return showPopup("Especialidade é obrigatória");
+
+      if (showCodigoInput) {
+        if (!formData.codigoWhats) return showPopup("Digite o código de verificação do WhatsApp");
+        if (formData.codigoWhats !== "1234") return showPopup("Código de teste inválido. Use 1234");
+      }
     }
 
     if (step === 2) {
@@ -88,7 +103,6 @@ const SignupServiceProvider = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // validação do step 4
     if (!formData.docFoto) return showPopup("Foto do documento é obrigatória");
     if (!formData.nascimento) return showPopup("Data de nascimento é obrigatória");
 
@@ -126,8 +140,19 @@ const SignupServiceProvider = () => {
             mask="(00) 00000-0000"
             name="whatsapp"
             placeholder='Número WhatsApp *'
-            onAccept={(value) => setFormData({ ...formData, whatsapp: value })}
+            onAccept={(value) => {
+              setFormData({ ...formData, whatsapp: value });
+              verificarNumeroCompleto(value); // chama a função separada
+            }}
           />
+          {showCodigoInput && (
+            <input
+              type="text"
+              name="codigoWhats"
+              placeholder="Digite o código de confirmação"
+              onChange={handleChange}
+            />
+          )}
           <input type="text" name="especialidade" placeholder='Especialidade *' onChange={handleChange} />
           <input type="text" name="cursos" placeholder='Cursos (opcional)' onChange={handleChange} />
           <button className='btn' onClick={nextStep}>Próximo</button>
@@ -185,7 +210,6 @@ const SignupServiceProvider = () => {
               }}
             />
           </label>
-
 
           <label>Data de Nascimento *</label>
           <input type="date" name="nascimento" onChange={handleChange} />
