@@ -12,11 +12,9 @@ const SignupContractor = () => {
   const [timer, setTimer] = useState(30);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const showPopup = (message, type = 'error') => {
-    setPopup({ message, type });
-    setTimeout(() => setPopup({ message: '', type: '' }), 3000);
-  };
+  const [toggleZoneDocs, setToggleZoneDocs] = useState("zoneImageDocs");
+  const [showCodigoInput, setShowCodigoInput] = useState(false);
+  const [end, setEnd] = useState("d-flex");
 
   useEffect(() => {
     let interval;
@@ -26,25 +24,66 @@ const SignupContractor = () => {
     return () => clearInterval(interval);
   }, [step, timer]);
 
+  const showPopup = (message, type = 'error') => {
+    setPopup({ message, type });
+    setTimeout(() => setPopup({ message: '', type: '' }), 3000);
+  };
+
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     setFormData({ ...formData, [name]: files ? files[0] : value });
+  };
+
+  const verificarNumeroCompleto = (numero) => {
+    const numeros = numero.replace(/\D/g, '');
+    const completo = numeros.length === 11;
+    setShowCodigoInput(completo);
+    return completo;
+  };
+
+  const validarNomeCompleto = (nome) => {
+    if (!nome) return false;
+    const palavras = nome.trim().split(/\s+/);
+    if (palavras.length < 2) return false;
+    for (let palavra of palavras) {
+      if (!/^[A-Za-zÀ-ÿ]{2,}([-'][A-Za-zÀ-ÿ]{2,})?$/.test(palavra)) return false;
+    }
+    return true;
+  };
+
+  const buscarEndereco = async (cep) => {
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const data = await response.json();
+      if (data.erro) return showPopup("CEP não encontrado");
+
+      setFormData(prev => ({
+        ...prev,
+        endereco: data.logradouro || '',
+        complemento: data.complemento || '',
+        bairro: data.bairro || '',
+        cidade: data.localidade || '',
+        estado: data.uf || ''
+      }));
+    } catch {
+      showPopup("Erro ao buscar o CEP");
+    }
   };
 
   const nextStep = (e) => {
     e.preventDefault();
 
     if (step === 1) {
-      if (!formData.nome) return showPopup("Nome completo é obrigatório");
+      if (!validarNomeCompleto(formData.nome)) return showPopup("Por favor, digite seu nome completo válido");
       if (!formData.whatsapp) return showPopup("Número WhatsApp é obrigatório");
+      if (showCodigoInput) {
+        if (!formData.codigoWhats) return showPopup("Digite o código de verificação do WhatsApp");
+        if (formData.codigoWhats !== "1234") return showPopup("Código de teste inválido. Use 1234");
+      }
       if (!formData.cpf) return showPopup("CPF é obrigatório");
-      if (!formData.nascimento) return showPopup("Data de nascimento é obrigatória");
-
-      const nascimento = new Date(formData.nascimento);
-      const hoje = new Date();
-      let idade = hoje.getFullYear() - nascimento.getFullYear();
-      const ajuste = hoje < new Date(hoje.getFullYear(), nascimento.getMonth(), nascimento.getDate());
-      if (idade - (ajuste ? 1 : 0) < 18) return showPopup("Você precisa ter mais de 18 anos");
     }
 
     if (step === 2) {
@@ -56,9 +95,19 @@ const SignupContractor = () => {
 
     if (step === 3) {
       if (!formData.docFoto) return showPopup("Foto do documento é obrigatória");
+      if (!formData.nascimento) return showPopup("Data de nascimento é obrigatória");
+
+      const nascimento = new Date(formData.nascimento);
+      const hoje = new Date();
+      let idade = hoje.getFullYear() - nascimento.getFullYear();
+      const ajuste = hoje < new Date(hoje.getFullYear(), nascimento.getMonth(), nascimento.getDate());
+      if (idade - (ajuste ? 1 : 0) < 18) return showPopup("Você precisa ter mais de 18 anos");
+
       if (!formData.senha) return showPopup("Senha é obrigatória");
       if (!formData.confirmarSenha) return showPopup("Confirme a senha");
       if (formData.senha !== formData.confirmarSenha) return showPopup("As senhas não coincidem");
+
+      setEnd("d-none");
     }
 
     setStep(step + 1);
@@ -81,11 +130,7 @@ const SignupContractor = () => {
 
   return (
     <>
-      {popup.message && (
-        <div className={`popup ${popup.type}`}>
-          {popup.message}
-        </div>
-      )}
+      {popup.message && <div className={`popup ${popup.type}`}>{popup.message}</div>}
 
       {/* Step 1 - Dados pessoais */}
       {step === 1 && (
@@ -97,8 +142,14 @@ const SignupContractor = () => {
             mask="(00) 00000-0000"
             name="whatsapp"
             placeholder="Número WhatsApp *"
-            onAccept={(value) => setFormData({ ...formData, whatsapp: value })}
+            onAccept={(value) => {
+              setFormData({ ...formData, whatsapp: value });
+              verificarNumeroCompleto(value);
+            }}
           />
+          {showCodigoInput && (
+            <input type="text" name="codigoWhats" placeholder="Código de confirmação" onChange={handleChange} />
+          )}
 
           <IMaskInput
             mask="000.000.000-00"
@@ -107,7 +158,6 @@ const SignupContractor = () => {
             onAccept={(value) => setFormData({ ...formData, cpf: value })}
           />
 
-          <input type="date" name="nascimento" onChange={handleChange} />
           <button className='btn' onClick={nextStep}>Próximo</button>
         </form>
       )}
@@ -116,27 +166,43 @@ const SignupContractor = () => {
       {step === 2 && (
         <form className='d-flex flex-column gap-4 animate__animated animate__fadeIn'>
           <span className='title'>Endereço</span>
-          <input type="text" name="endereco" placeholder="Endereço *" onChange={handleChange} />
 
           <IMaskInput
             mask="00000-000"
             name="cep"
             placeholder="CEP *"
+            value={formData.cep || ''}
             onAccept={(value) => setFormData({ ...formData, cep: value })}
+            onBlur={(e) => buscarEndereco(e.target.value)}
           />
 
+          <input type="text" name="endereco" placeholder="Endereço *" value={formData.endereco || ''} onChange={handleChange} />
           <input type="text" name="numero" placeholder="Número *" onChange={handleChange} />
-          <input type="text" name="complemento" placeholder="Complemento *" onChange={handleChange} />
+          <input type="text" name="complemento" placeholder="Complemento *" value={formData.complemento || ''} onChange={handleChange} />
           <button className='btn' onClick={nextStep}>Próximo</button>
         </form>
       )}
 
-      {/* Step 3 - Documento e Senha */}
+      {/* Step 3 - Documento, Data de Nascimento e Senha */}
       {step === 3 && (
         <form className='d-flex flex-column gap-4 animate__animated animate__fadeIn'>
           <span className='title'>Documento e Senha</span>
-          <label>Envie uma foto do seu documento *</label>
-          <input type="file" name="docFoto" onChange={handleChange} />
+
+          <label className={`${toggleZoneDocs}`}>
+            <input
+              type="file"
+              className="d-none"
+              name="docFoto"
+              accept="image/*,application/pdf"
+              onChange={(e) => {
+                handleChange(e);
+                setToggleZoneDocs("zoneImageDocsActive");
+              }}
+            />
+          </label>
+
+          <label>Data de Nascimento *</label>
+          <input type="date" name="nascimento" onChange={handleChange} />
 
           <div className="password-wrapper">
             <input
@@ -149,6 +215,7 @@ const SignupContractor = () => {
               {showPassword ? '🙈' : '👁️'}
             </span>
           </div>
+
           <div className="password-wrapper">
             <input
               type={showConfirmPassword ? "text" : "password"}
@@ -172,18 +239,13 @@ const SignupContractor = () => {
           <p>Enviamos um código de verificação para o seu e-mail. Digite abaixo:</p>
           <input type="text" name="codigo" placeholder="Digite o código" onChange={handleChange} />
           <button className='btn' type="submit">Confirmar Código</button>
-          <button
-            type="button"
-            className='btn btn-secondary'
-            disabled={timer > 0}
-            onClick={reenviarCodigo}
-          >
+          <button type="button" className='btn btn-secondary' disabled={timer > 0} onClick={reenviarCodigo}>
             {timer > 0 ? `Reenviar em ${timer}s` : "Reenviar Código"}
           </button>
         </form>
       )}
 
-      <div className='d-flex flex-column gap-2'>
+      <div className={`${end} flex-column gap-2`}>
         <button className='btn' onClick={() => navigate("/")}>Login</button>
         <button className='btn' onClick={() => navigate("/signup-service-provider")}>Sou prestador de serviço</button>
       </div>
