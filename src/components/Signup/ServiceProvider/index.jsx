@@ -60,7 +60,6 @@ const SignupServiceProvider = () => {
     setToggleZoneDocs("zoneImageDocsActive");
   }
 
-  // função separada para verificar se o número de whatsapp está completo
   const verificarNumeroCompleto = (numero) => {
     const numeros = numero.replace(/\D/g, '');
     const completo = numeros.length === 11;
@@ -68,12 +67,26 @@ const SignupServiceProvider = () => {
     return completo;
   };
 
+  // validação de nome completo robusta
+  const validarNomeCompleto = (nome) => {
+    if (!nome) return false;
+
+    const palavras = nome.trim().split(/\s+/);
+    if (palavras.length < 2) return false;
+
+    // cada palavra deve ter pelo menos 2 letras, pode ter hífen/apóstrofo
+    for (let palavra of palavras) {
+      if (!/^[A-Za-zÀ-ÿ]{2,}([-'][A-Za-zÀ-ÿ]{2,})?$/.test(palavra)) return false;
+    }
+
+    return true;
+  };
 
   const nextStep = (e) => {
     e.preventDefault();
 
     if (step === 1) {
-      if (!formData.nome) return showPopup("Nome completo é obrigatório");
+      if (!validarNomeCompleto(formData.nome)) return showPopup("Por favor, digite seu nome completo válido");
       if (!formData.whatsapp) return showPopup("Número WhatsApp é obrigatório");
       if (!formData.especialidade) return showPopup("Especialidade é obrigatória");
 
@@ -142,7 +155,7 @@ const SignupServiceProvider = () => {
             placeholder='Número WhatsApp *'
             onAccept={(value) => {
               setFormData({ ...formData, whatsapp: value });
-              verificarNumeroCompleto(value); // chama a função separada
+              verificarNumeroCompleto(value);
             }}
           />
           {showCodigoInput && (
