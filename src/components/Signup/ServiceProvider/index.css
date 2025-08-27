@@ -26,9 +26,21 @@
 }
 
 @keyframes fadeInOut {
-  0% { opacity: 0; transform: translateY(-15px) scale(0.95); }
-  10%, 90% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-15px) scale(0.95); }
+  0% {
+    opacity: 0;
+    transform: translateY(-15px) scale(0.95);
+  }
+
+  10%,
+  90% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-15px) scale(0.95);
+  }
 }
 
 /* Senha com olho */
@@ -66,4 +78,58 @@
 
 .toggle-eye:hover {
   color: #1677ff;
+}
+
+.zoneImageDocs {
+  border: 1px dotted rgba(0, 0, 0, 0.79);
+  height: 5rem;
+  border-radius: 8px;
+  transition: all .8s;
+  background-color: rgba(0, 0, 0, 0.099);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoneImageDocsActive {
+  border: 1px dotted green;
+  transition: all .8s;
+  height: 5rem;
+  border-radius: 8px;
+  background-color: rgba(0, 128, 0, 0.317);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoneImageDocs,
+.zoneImageDocsActive {
+  transition: all 0.8s;
+  /* define a animação */
+}
+
+.zoneImageDocs:hover,
+.zoneImageDocsActive:hover {
+  transform: translateY(-5px);
+  /* sobe 5px ao passar o mouse */
+}
+
+.zoneImageDocs::after {
+  content: "";
+  width: 3rem;
+  height: 3rem;
+  background-image: url(https://i.ibb.co/QFMxhCyb/upload-de-arquivo.png);
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.zoneImageDocsActive::before {
+  content: "";
+  width: 3rem;
+  height: 3rem;
+  background-image: url(https://i.ibb.co/WN23Sh5s/verifica.png);
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
 }

@@ -12,16 +12,13 @@ const SignupServiceProvider = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [end, setEnd] = useState("d-flex");
-
-  // timer para reenviar código
   const [timer, setTimer] = useState(30);
+  const [toggleZoneDocs, setToggleZoneDocs] = useState("zoneImageDocs")
 
   useEffect(() => {
     let interval;
     if (step === 5 && timer > 0) {
-      interval = setInterval(() => {
-        setTimer((prev) => prev - 1);
-      }, 1000);
+      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
     }
     return () => clearInterval(interval);
   }, [step, timer]);
@@ -35,6 +32,32 @@ const SignupServiceProvider = () => {
     const { name, value, files } = e.target;
     setFormData({ ...formData, [name]: files ? files[0] : value });
   };
+
+  const buscarEndereco = async (cep) => {
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const data = await response.json();
+      if (data && data.erro) return showPopup("CEP não encontrado");
+
+      setFormData((prev) => ({
+        ...prev,
+        endereco: data.logradouro || '',
+        complemento: data.complemento || '',
+        bairro: data.bairro || '',
+        cidade: data.localidade || '',
+        estado: data.uf || ''
+      }));
+    } catch {
+      showPopup("Erro ao buscar o CEP");
+    }
+  };
+
+  const handleChangeDocs = () => {
+    setToggleZoneDocs("zoneImageDocsActive");
+  }
 
   const nextStep = (e) => {
     e.preventDefault();
@@ -59,60 +82,52 @@ const SignupServiceProvider = () => {
       setEnd("d-none");
     }
 
-    if (step === 4) {
-      if (!formData.docFoto) return showPopup("Foto do documento é obrigatória");
-      if (!formData.nascimento) return showPopup("Data de nascimento é obrigatória");
-
-      const nascimento = new Date(formData.nascimento);
-      const hoje = new Date();
-      let idade = hoje.getFullYear() - nascimento.getFullYear();
-      const ajuste = hoje < new Date(hoje.getFullYear(), nascimento.getMonth(), nascimento.getDate());
-      if (idade - (ajuste ? 1 : 0) < 18) return showPopup("Você precisa ter mais de 18 anos");
-
-      if (!formData.senha) return showPopup("Senha é obrigatória");
-      if (!formData.confirmarSenha) return showPopup("Confirme a senha");
-      if (formData.senha !== formData.confirmarSenha) return showPopup("As senhas não coincidem");
-    }
-
     setStep(step + 1);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // validação do step 4
+    if (!formData.docFoto) return showPopup("Foto do documento é obrigatória");
+    if (!formData.nascimento) return showPopup("Data de nascimento é obrigatória");
+
+    const nascimento = new Date(formData.nascimento);
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const ajuste = hoje < new Date(hoje.getFullYear(), nascimento.getMonth(), nascimento.getDate());
+    if (idade - (ajuste ? 1 : 0) < 18) return showPopup("Você precisa ter mais de 18 anos");
+
+    if (!formData.senha) return showPopup("Senha é obrigatória");
+    if (!formData.confirmarSenha) return showPopup("Confirme a senha");
+    if (formData.senha !== formData.confirmarSenha) return showPopup("As senhas não coincidem");
+
     console.log(formData);
     showPopup("Cadastro realizado com sucesso!", "success");
-    setStep(5); // vai para confirmação de e-mail
-    setTimer(30); // reinicia timer ao chegar no step 5
+    setStep(5);
+    setTimer(30);
   };
 
   const reenviarCodigo = () => {
     showPopup("Novo código enviado para o seu e-mail!", "success");
-    setTimer(30); // reinicia o contador
+    setTimer(30);
   };
 
   return (
     <>
-      {/* popup */}
-      {popup.message && (
-        <div className={`popup ${popup.type}`}>
-          {popup.message}
-        </div>
-      )}
+      {popup.message && <div className={`popup ${popup.type}`}>{popup.message}</div>}
 
       {/* Step 1 */}
       {step === 1 && (
         <form className='d-flex flex-column gap-4'>
           <span className='title'>Prestador de serviços</span>
           <input type="text" name="nome" placeholder='Nome completo *' onChange={handleChange} />
-
-          {/* whatsapp com máscara */}
           <IMaskInput
             mask="(00) 00000-0000"
             name="whatsapp"
             placeholder='Número WhatsApp *'
             onAccept={(value) => setFormData({ ...formData, whatsapp: value })}
           />
-
           <input type="text" name="especialidade" placeholder='Especialidade *' onChange={handleChange} />
           <input type="text" name="cursos" placeholder='Cursos (opcional)' onChange={handleChange} />
           <button className='btn' onClick={nextStep}>Próximo</button>
@@ -124,15 +139,12 @@ const SignupServiceProvider = () => {
         <form className='d-flex flex-column gap-4 animate__animated animate__fadeIn'>
           <span className='title'>Sobre mim e CPF</span>
           <textarea name="descricao" placeholder='Sobre mim *' onChange={handleChange}></textarea>
-
-          {/* CPF com máscara */}
           <IMaskInput
             mask="000.000.000-00"
             name="cpf"
             placeholder='CPF *'
             onAccept={(value) => setFormData({ ...formData, cpf: value })}
           />
-
           <button className='btn' onClick={nextStep}>Próximo</button>
         </form>
       )}
@@ -141,18 +153,17 @@ const SignupServiceProvider = () => {
       {step === 3 && (
         <form className='d-flex flex-column gap-4 animate__animated animate__fadeIn'>
           <span className='title'>Endereço</span>
-          <input type="text" name="endereco" placeholder='Endereço *' onChange={handleChange} />
-
-          {/* CEP com máscara */}
           <IMaskInput
             mask="00000-000"
             name="cep"
             placeholder='CEP *'
+            value={formData.cep || ''}
             onAccept={(value) => setFormData({ ...formData, cep: value })}
+            onBlur={(e) => buscarEndereco(e.target.value)}
           />
-
+          <input type="text" name="endereco" placeholder='Endereço *' value={formData.endereco || ''} onChange={handleChange} />
           <input type="text" name="numero" placeholder='Número *' onChange={handleChange} />
-          <input type="text" name="complemento" placeholder='Complemento *' onChange={handleChange} />
+          <input type="text" name="complemento" placeholder='Complemento *' value={formData.complemento || ''} onChange={handleChange} />
           <button className='btn' onClick={nextStep}>Próximo</button>
         </form>
       )}
@@ -161,8 +172,21 @@ const SignupServiceProvider = () => {
       {step === 4 && (
         <form className='d-flex flex-column gap-4 animate__animated animate__fadeIn' onSubmit={handleSubmit}>
           <span className='title'>Finalização</span>
-          <label>Foto do Documento *</label>
-          <input type="file" name="docFoto" onChange={handleChange} />
+
+          <label className={`${toggleZoneDocs}`}>
+            <input
+              type="file"
+              className="d-none"
+              name="docFoto"
+              accept="image/*,application/pdf"
+              onChange={(e) => {
+                handleChange(e);
+                handleChangeDocs(e);
+              }}
+            />
+          </label>
+
+
           <label>Data de Nascimento *</label>
           <input type="date" name="nascimento" onChange={handleChange} />
           <div className="password-wrapper">
@@ -196,12 +220,8 @@ const SignupServiceProvider = () => {
         <form className='d-flex flex-column gap-4 animate__animated animate__fadeIn'>
           <span className='title'>Confirmação de E-mail</span>
           <p>Enviamos um código de verificação para o seu e-mail. Digite abaixo para confirmar:</p>
-
           <input type="text" name="codigo" placeholder='Digite o código recebido' onChange={handleChange} />
-
           <button className='btn'>Confirmar Código</button>
-
-          {/* botão só habilita quando timer chega a 0 */}
           <button
             type="button"
             className='btn btn-secondary'
